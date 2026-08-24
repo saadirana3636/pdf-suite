@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Suite Ultimate</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        body {
+            background: radial-gradient(circle at 50% 10%, #0d1527 0%, #060913 100%);
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+            color: #f8fafc;
+            user-select: none;
+            min-height: 100vh;
+        }
+        .glass-panel {
+            background: rgba(18, 26, 43, 0.75);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glow-btn {
+            background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%);
+            box-shadow: 0 8px 24px -4px rgba(37, 99, 235, 0.5);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glow-btn:active { transform: scale(0.97); }
+        .tab-active { color: #38bdf8; position: relative; }
+        .tab-active::after {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 5px;
+            height: 5px;
+            background: #38bdf8;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #38bdf8;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center p-2 md:p-6">
+    <div class="w-full max-w-[430px] h-[860px] glass-panel rounded-[48px] border-2 border-white/15 flex flex-col overflow-hidden relative shadow-2xl">
+        <div class="flex justify-between items-center px-8 pt-5 pb-2 text-xs font-semibold text-slate-300">
+            <span>12:09</span>
+            <div class="flex items-center gap-2"><span>5G</span><span>100%</span></div>
+        </div>
+        <header class="flex justify-between items-center px-6 py-3">
+            <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">PDF Suite Ultimate</h1>
+            <div class="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-xs">•••</div>
+        </header>
+        <main class="flex-1 overflow-y-auto px-5 py-2 space-y-4" id="screenContainer"></main>
+        <nav class="glass-panel border-t border-white/10 py-3 px-6 flex justify-between items-center text-slate-400 text-[11px] font-medium">
+            <button onclick="navigate('home', event)" class="tab-item flex flex-col items-center gap-1 tab-active" id="tab-home"><span class="text-lg">🏠</span><span>Home</span></button>
+            <button onclick="navigate('scanner', event)" class="tab-item flex flex-col items-center gap-1" id="tab-scanner"><span class="text-lg">📷</span><span>Scanner</span></button>
+            <button onclick="navigate('editor', event)" class="tab-item flex flex-col items-center gap-1" id="tab-editor"><span class="text-lg">✍️</span><span>Editor</span></button>
+            <button onclick="navigate('manage', event)" class="tab-item flex flex-col items-center gap-1" id="tab-manage"><span class="text-lg">📑</span><span>Pages</span></button>
+            <button onclick="navigate('convert', event)" class="tab-item flex flex-col items-center gap-1" id="tab-convert"><span class="text-lg">🔄</span><span>Tools</span></button>
+        </nav>
+    </div>
+    <script>
+        let selectedPages = [1, 2, 3, 5];
+        function triggerSparkles(e) {
+            confetti({ particleCount: 22, spread: 50, origin: { y: 0.8 }, colors: ['#38bdf8', '#818cf8', '#ffffff'] });
+        }
+        function navigate(tab, e) {
+            document.querySelectorAll('.tab-item').forEach(b => b.classList.remove('tab-active'));
+            const targetTab = document.getElementById('tab-' + tab);
+            if (targetTab) targetTab.classList.add('tab-active');
+            if (e) triggerSparkles(e);
+            const container = document.getElementById('screenContainer');
+            if (tab === 'home') {
+                container.innerHTML = `
+                    <div class="grid grid-cols-2 gap-3">
+                        <div onclick="navigate('scanner', event)" class="glass-panel p-4 rounded-3xl border border-white/10 hover:border-blue-500/50 cursor-pointer">
+                            <div class="w-10 h-10 rounded-2xl bg-blue-500/20 text-blue-400 flex items-center justify-center text-xl mb-3">📷</div>
+                            <h3 class="font-semibold text-sm">Doc Scanner</h3>
+                            <p class="text-[11px] text-slate-400">Auto edge camera scan</p>
+                        </div>
+                        <div onclick="navigate('editor', event)" class="glass-panel p-4 rounded-3xl border border-white/10 hover:border-blue-500/50 cursor-pointer">
+                            <div class="w-10 h-10 rounded-2xl bg-purple-500/20 text-purple-400 flex items-center justify-center text-xl mb-3">✍️</div>
+                            <h3 class="font-semibold text-sm">PDF Editor</h3>
+                            <p class="text-[11px] text-slate-400">Draw, highlight & text</p>
+                        </div>
+                        <div onclick="navigate('manage', event)" class="glass-panel p-4 rounded-3xl border border-white/10 hover:border-blue-500/50 cursor-pointer">
+                            <div class="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl mb-3">📑</div>
+                            <h3 class="font-semibold text-sm">Page Picker</h3>
+                            <p class="text-[11px] text-slate-400">Extract & crop pages</p>
+                        </div>
+                        <div onclick="navigate('convert', event)" class="glass-panel p-4 rounded-3xl border border-white/10 hover:border-blue-500/50 cursor-pointer">
+                            <div class="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl mb-3">🔄</div>
+                            <h3 class="font-semibold text-sm">Converters</h3>
+                            <p class="text-[11px] text-slate-400">HTML, Word, Zip & 12+</p>
+                        </div>
+                    </div>
+                    <div class="glass-panel rounded-3xl p-4 border border-white/10 space-y-3">
+                        <div class="flex justify-between items-center text-xs font-medium text-slate-400 px-1">
+                            <span>🕒 Recent Files</span>
+                            <span class="text-blue-400">View All</span>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between p-3 rounded-2xl bg-white/5">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-red-400 text-lg">📄</span>
+                                    <div><p class="text-xs font-semibold">Project_Proposal.pdf</p><p class="text-[10px] text-slate-400">4 Pages • 2.4 MB • Today</p></div>
+                                </div>
+                                <span class="text-slate-500">›</span>
+                            </div>
+                            <div class="flex items-center justify-between p-3 rounded-2xl bg-white/5">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-emerald-400 text-lg">📊</span>
+                                    <div><p class="text-xs font-semibold">Financial_Report.xlsx</p><p class="text-[10px] text-slate-400">Converted to PDF • 1.1 MB</p></div>
+                                </div>
+                                <span class="text-slate-500">›</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (tab === 'manage') {
+                container.innerHTML = `
+                    <div class="flex justify-between items-center mb-1">
+                        <h2 class="text-base font-semibold">Visual Page Picker</h2>
+                        <span class="text-xs text-blue-400 font-medium">${selectedPages.length} Selected</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-3" id="pagesGrid"></div>
+                    <button onclick="triggerSparkles(event)" class="glow-btn w-full py-3.5 rounded-2xl font-semibold text-sm flex items-center justify-center gap-2 mt-2">
+                        <span>📥</span> Save Selected Pages as New PDF
+                    </button>
+                `;
+                renderPagesGrid();
+            } else if (tab === 'convert') {
+                container.innerHTML = `
+                    <h2 class="text-base font-semibold mb-1">Converter & Tools Suite</h2>
+                    <p class="text-[11px] text-slate-400 mb-3">1-Click Offline Document Tools</p>
+                    <div class="grid grid-cols-4 gap-2.5">
+                        ${renderToolTile('HTML to PDF', '🌐', 'bg-blue-500/20 text-blue-400')}
+                        ${renderToolTile('PDF to HTML', '📄', 'bg-indigo-500/20 text-indigo-400')}
+                        ${renderToolTile('Image to PDF', '🖼️', 'bg-purple-500/20 text-purple-400')}
+                        ${renderToolTile('PDF to Image', '📸', 'bg-rose-500/20 text-rose-400')}
+                        ${renderToolTile('Word to PDF', '📝', 'bg-sky-500/20 text-sky-400')}
+                        ${renderToolTile('Excel to PDF', '📊', 'bg-emerald-500/20 text-emerald-400')}
+                        ${renderToolTile('PPT to PDF', '📑', 'bg-amber-500/20 text-amber-400')}
+                        ${renderToolTile('PDF to Word', '📘', 'bg-violet-500/20 text-violet-400')}
+                        ${renderToolTile('OCR Extract', '🔍', 'bg-cyan-500/20 text-cyan-400')}
+                        ${renderToolTile('Flatten PDF', '🔒', 'bg-teal-500/20 text-teal-400')}
+                        ${renderToolTile('PDF to ZIP', '📦', 'bg-yellow-500/20 text-yellow-400')}
+                        ${renderToolTile('QR to PDF', '🏁', 'bg-pink-500/20 text-pink-400')}
+                        ${renderToolTile('Watermark', '🏷️', 'bg-blue-600/20 text-blue-300')}
+                        ${renderToolTile('Compress', '🗜️', 'bg-red-500/20 text-red-400')}
+                    </div>
+                `;
+            } else if (tab === 'editor') {
+                container.innerHTML = `
+                    <div class="flex justify-between items-center gap-1.5 p-2 rounded-2xl glass-panel text-xs">
+                        <button class="p-2 rounded-xl bg-blue-500/30 text-blue-300">✏️ Pen</button>
+                        <button class="p-2 rounded-xl bg-white/5">🖍️ Highlight</button>
+                        <button class="p-2 rounded-xl bg-white/5">✍️ Text</button>
+                        <button class="p-2 rounded-xl bg-white/5">⬛ Redact</button>
+                        <button class="p-2 rounded-xl bg-white/5">🔍 Spot</button>
+                    </div>
+                    <div class="h-80 bg-white rounded-2xl p-4 text-slate-800 flex flex-col justify-between shadow-inner">
+                        <div>
+                            <h3 class="font-bold border-b pb-1 text-sm text-slate-900">PDF Editor Live Document</h3>
+                            <p class="text-xs mt-2 text-slate-600">• High quality camera document scanner</p>
+                            <p class="text-xs mt-1 text-slate-600">• Offline Word and Excel PDF conversion</p>
+                            <p class="text-xs mt-1 text-slate-600">• AES-256 PDF encryption & password lock</p>
+                        </div>
+                        <div class="p-2 bg-yellow-100 rounded text-[11px] border border-yellow-300 text-yellow-800 font-medium">
+                            ✍️ Highlight: High quality document camera scanner
+                        </div>
+                    </div>
+                    <button onclick="triggerSparkles(event)" class="glow-btn w-full py-3.5 rounded-2xl font-semibold text-sm">Save Edited PDF</button>
+                `;
+            } else if (tab === 'scanner') {
+                container.innerHTML = `
+                    <div class="h-80 rounded-3xl border-2 border-dashed border-blue-500/40 relative flex flex-col items-center justify-center p-6 text-center glass-panel">
+                        <div class="w-16 h-16 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-3xl mb-3 animate-pulse">📷</div>
+                        <h3 class="font-semibold text-sm">Auto Edge Document Scanner</h3>
+                        <p class="text-xs text-slate-400 mt-1">Point camera at documents to scan offline</p>
+                    </div>
+                    <button onclick="triggerSparkles(event)" class="glow-btn w-full py-3.5 rounded-2xl font-semibold text-sm">Capture & Make PDF</button>
+                `;
+            }
+        }
+        function renderToolTile(name, icon, colorClass) {
+            return `
+                <div onclick="triggerSparkles(event)" class="glass-panel p-2.5 rounded-2xl border border-white/10 hover:border-blue-400/60 cursor-pointer flex flex-col items-center text-center gap-1.5">
+                    <div class="w-8 h-8 rounded-xl ${colorClass} flex items-center justify-center text-sm">${icon}</div>
+                    <span class="text-[10px] font-medium leading-tight">${name}</span>
+                </div>
+            `;
+        }
+        function renderPagesGrid() {
+            const grid = document.getElementById('pagesGrid');
+            if (!grid) return;
+            grid.innerHTML = '';
+            for (let i = 1; i <= 6; i++) {
+                const isSelected = selectedPages.includes(i);
+                grid.innerHTML += `
+                    <div onclick="togglePage(${i})" class="glass-panel p-2 rounded-2xl border ${isSelected ? 'border-blue-400 bg-blue-500/10' : 'border-white/10'} cursor-pointer flex flex-col items-center relative">
+                        <div class="w-5 h-5 rounded-full ${isSelected ? 'bg-blue-500 text-white' : 'border border-white/30'} absolute top-2 right-2 flex items-center justify-center text-[10px] font-bold">
+                            ${isSelected ? '✓' : ''}
+                        </div>
+                        <div class="w-full h-24 bg-white/5 rounded-xl mb-1.5 flex items-center justify-center text-xs text-slate-400">Doc ${i}</div>
+                        <span class="text-[11px] font-medium">Page ${i}</span>
+                    </div>
+                `;
+            }
+        }
+        function togglePage(num) {
+            if (selectedPages.includes(num)) { selectedPages = selectedPages.filter(p => p !== num); }
+            else { selectedPages.push(num); }
+            navigate('manage');
+        }
+        navigate('home');
+    </script>
+</body>
+</html>
