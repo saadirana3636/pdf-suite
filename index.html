@@ -42,30 +42,38 @@
             border-radius: 50%;
             box-shadow: 0 0 10px #38bdf8;
         }
+        .scan-laser {
+            animation: scanning 2s ease-in-out infinite alternate;
+        }
+        @keyframes scanning {
+            0% { top: 10%; }
+            100% { top: 90%; }
+        }
     </style>
 </head>
 <body class="flex items-center justify-center p-2 md:p-6">
-    <div class="w-full max-w-[430px] min-h-[850px] glass-panel rounded-[40px] border-2 border-white/15 flex flex-col overflow-hidden relative shadow-2xl">
+    <div class="w-full max-w-[430px] min-h-[860px] glass-panel rounded-[40px] border-2 border-white/15 flex flex-col overflow-hidden relative shadow-2xl">
         
-        <!-- Header -->
+        <!-- Top Status & Header -->
         <header class="flex justify-between items-center px-6 pt-5 pb-3 border-b border-white/5">
             <div>
                 <h1 class="text-lg font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">PDF Suite Ultimate</h1>
-                <p class="text-[10px] text-emerald-400 font-medium">● Complete Offline Pro Studio</p>
+                <p class="text-[10px] text-emerald-400 font-medium">● Complete Live Scanner & Offline Studio</p>
             </div>
             <div class="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-xs">•••</div>
         </header>
 
-        <!-- Main Dynamic Screen -->
+        <!-- Main Dynamic Screen Content -->
         <main class="flex-1 overflow-y-auto px-5 py-4 space-y-4" id="screenContainer"></main>
 
-        <!-- Bottom Tabs -->
-        <nav class="glass-panel border-t border-white/10 py-3 px-6 flex justify-between items-center text-slate-400 text-[11px] font-medium">
-            <button onclick="navigate('home', event)" class="tab-item flex flex-col items-center gap-1 tab-active" id="tab-home"><span class="text-lg">🏠</span><span>Home</span></button>
-            <button onclick="navigate('crop', event)" class="tab-item flex flex-col items-center gap-1" id="tab-crop"><span class="text-lg">✂️</span><span>Crop</span></button>
-            <button onclick="navigate('editor', event)" class="tab-item flex flex-col items-center gap-1" id="tab-editor"><span class="text-lg">✍️</span><span>Editor</span></button>
-            <button onclick="navigate('manage', event)" class="tab-item flex flex-col items-center gap-1" id="tab-manage"><span class="text-lg">📑</span><span>Pages</span></button>
-            <button onclick="navigate('convert', event)" class="tab-item flex flex-col items-center gap-1" id="tab-convert"><span class="text-lg">🔄</span><span>Tools</span></button>
+        <!-- Bottom Navigation Bar (6 Complete Tabs) -->
+        <nav class="glass-panel border-t border-white/10 py-3 px-4 flex justify-between items-center text-slate-400 text-[10px] font-medium">
+            <button onclick="navigate('home', event)" class="tab-item flex flex-col items-center gap-1 tab-active" id="tab-home"><span class="text-base">🏠</span><span>Home</span></button>
+            <button onclick="navigate('scanner', event)" class="tab-item flex flex-col items-center gap-1" id="tab-scanner"><span class="text-base">📷</span><span>Scan</span></button>
+            <button onclick="navigate('crop', event)" class="tab-item flex flex-col items-center gap-1" id="tab-crop"><span class="text-base">✂️</span><span>Crop</span></button>
+            <button onclick="navigate('editor', event)" class="tab-item flex flex-col items-center gap-1" id="tab-editor"><span class="text-base">✍️</span><span>Editor</span></button>
+            <button onclick="navigate('manage', event)" class="tab-item flex flex-col items-center gap-1" id="tab-manage"><span class="text-base">📑</span><span>Pages</span></button>
+            <button onclick="navigate('convert', event)" class="tab-item flex flex-col items-center gap-1" id="tab-convert"><span class="text-base">🔄</span><span>Tools</span></button>
         </nav>
     </div>
 
@@ -77,15 +85,29 @@
         let currentTool = 'pen';
         let currentAngle = 0;
 
+        // Scanner States
+        let videoStream = null;
+        let capturedScanPages = [];
+        let scanFilter = 'magic';
+
         // Crop States
         let cropStartX = 0, cropStartY = 0, cropEndX = 0, cropEndY = 0;
         let isCropping = false;
+        let originalCropImg = null;
 
         function triggerSparkles() {
             confetti({ particleCount: 22, spread: 50, origin: { y: 0.85 }, colors: ['#38bdf8', '#818cf8', '#ffffff'] });
         }
 
+        function stopCameraStream() {
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
+            }
+        }
+
         function navigate(tab, e) {
+            stopCameraStream();
             document.querySelectorAll('.tab-item').forEach(b => b.classList.remove('tab-active'));
             const target = document.getElementById('tab-' + tab);
             if (target) target.classList.add('tab-active');
@@ -95,45 +117,106 @@
 
             if (tab === 'home') {
                 container.innerHTML = `
+                    <!-- Top Main 4 Grid -->
                     <div class="grid grid-cols-2 gap-3">
-                        <div onclick="navigate('crop', event)" class="glass-panel p-4 rounded-3xl border border-white/10 hover:border-blue-500/50 cursor-pointer">
+                        <div onclick="navigate('scanner', event)" class="glass-panel p-4 rounded-3xl border border-white/10 hover:border-blue-500/50 cursor-pointer">
+                            <div class="w-10 h-10 rounded-2xl bg-blue-500/20 text-blue-400 flex items-center justify-center text-xl mb-2 animate-pulse">📷</div>
+                            <h3 class="font-semibold text-xs">Live Doc Scanner</h3>
+                            <p class="text-[10px] text-slate-400">Camera Edge Detection</p>
+                        </div>
+                        <div onclick="navigate('crop', event)" class="glass-panel p-4 rounded-3xl border border-white/10 hover:border-rose-500/50 cursor-pointer">
                             <div class="w-10 h-10 rounded-2xl bg-rose-500/20 text-rose-400 flex items-center justify-center text-xl mb-2">✂️</div>
                             <h3 class="font-semibold text-xs">PDF Crop Studio</h3>
-                            <p class="text-[10px] text-slate-400">Trim & Custom Box</p>
+                            <p class="text-[10px] text-slate-400">Custom Box Trim</p>
                         </div>
-                        <div onclick="navigate('editor', event)" class="glass-panel p-4 rounded-3xl border border-white/10 hover:border-blue-500/50 cursor-pointer">
+                        <div onclick="navigate('editor', event)" class="glass-panel p-4 rounded-3xl border border-white/10 hover:border-purple-500/50 cursor-pointer">
                             <div class="w-10 h-10 rounded-2xl bg-purple-500/20 text-purple-400 flex items-center justify-center text-xl mb-2">✍️</div>
                             <h3 class="font-semibold text-xs">Deep PDF Edit</h3>
                             <p class="text-[10px] text-slate-400">Text, Draw, Sign</p>
                         </div>
-                        <div onclick="navigate('manage', event)" class="glass-panel p-4 rounded-3xl border border-white/10 hover:border-blue-500/50 cursor-pointer">
+                        <div onclick="navigate('manage', event)" class="glass-panel p-4 rounded-3xl border border-white/10 hover:border-emerald-500/50 cursor-pointer">
                             <div class="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl mb-2">📑</div>
                             <h3 class="font-semibold text-xs">Page Picker</h3>
                             <p class="text-[10px] text-slate-400">Extract & Split</p>
                         </div>
-                        <div onclick="navigate('convert', event)" class="glass-panel p-4 rounded-3xl border border-white/10 hover:border-blue-500/50 cursor-pointer">
-                            <div class="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl mb-2">🔄</div>
-                            <h3 class="font-semibold text-xs">15+ Converters</h3>
-                            <p class="text-[10px] text-slate-400">All Format Suite</p>
-                        </div>
                     </div>
 
+                    <!-- Direct Quick Actions -->
                     <div class="glass-panel rounded-3xl p-4 border border-white/10 space-y-2">
-                        <h4 class="text-xs font-semibold text-slate-300">⚡ Fast Merge Engine</h4>
+                        <div class="flex justify-between items-center">
+                            <h4 class="text-xs font-semibold text-slate-300">⚡ 1-Click Fast Merge</h4>
+                            <span onclick="navigate('convert', event)" class="text-[10px] text-blue-400 cursor-pointer">More 15+ Tools ›</span>
+                        </div>
                         <input type="file" id="homeMergeFiles" multiple accept=".pdf" class="block w-full text-[10px] text-slate-400 file:mr-2 file:py-1 file:px-3 file:rounded-xl file:border-0 file:bg-blue-600 file:text-white cursor-pointer">
-                        <button onclick="executeMerge()" class="glow-btn w-full py-2.5 rounded-xl text-xs font-semibold">Merge Documents</button>
+                        <button onclick="executeMerge()" class="glow-btn w-full py-2.5 rounded-xl text-xs font-semibold">Merge Selected PDFs</button>
                     </div>
                 `;
+            } else if (tab === 'scanner') {
+                container.innerHTML = `
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <h2 class="text-sm font-semibold">Live Camera Document Scanner</h2>
+                            <span class="text-[10px] text-emerald-400 font-medium" id="scanCountBadge">${capturedScanPages.length} Pages Scanned</span>
+                        </div>
+
+                        <!-- Live Viewfinder Frame -->
+                        <div class="relative w-full h-[280px] rounded-3xl overflow-hidden border-2 border-blue-500/50 bg-black flex items-center justify-center shadow-inner">
+                            <video id="scanVideo" autoplay playsinline class="w-full h-full object-cover"></video>
+                            
+                            <!-- Laser Scanning Animation Line -->
+                            <div class="absolute left-4 right-4 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent scan-laser shadow-[0_0_8px_#38bdf8]"></div>
+                            
+                            <!-- Corner Detection Overlays -->
+                            <div class="absolute inset-4 border-2 border-dashed border-cyan-400/60 rounded-2xl pointer-events-none flex flex-col justify-between p-2">
+                                <div class="flex justify-between">
+                                    <span class="w-4 h-4 border-t-2 border-l-2 border-cyan-300"></span>
+                                    <span class="w-4 h-4 border-t-2 border-r-2 border-cyan-300"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="w-4 h-4 border-b-2 border-l-2 border-cyan-300"></span>
+                                    <span class="w-4 h-4 border-b-2 border-r-2 border-cyan-300"></span>
+                                </div>
+                            </div>
+
+                            <button id="cameraStartBtn" onclick="startLiveCamera()" class="absolute px-4 py-2 rounded-2xl bg-blue-600 text-white text-xs font-semibold shadow-lg">
+                                📷 Start Live Camera
+                            </button>
+                        </div>
+
+                        <!-- Filter Selection Bar -->
+                        <div class="grid grid-cols-3 gap-2">
+                            <button onclick="setScanFilter('magic')" class="scan-flt-btn py-1.5 rounded-xl text-[10px] bg-blue-500/30 border border-blue-400 text-blue-300" id="flt-magic">✨ Magic Clean</button>
+                            <button onclick="setScanFilter('bw')" class="scan-flt-btn py-1.5 rounded-xl text-[10px] bg-white/5 border border-white/10 text-slate-300" id="flt-bw">📄 Clean B&W</button>
+                            <button onclick="setScanFilter('color')" class="scan-flt-btn py-1.5 rounded-xl text-[10px] bg-white/5 border border-white/10 text-slate-300" id="flt-color">🎨 Original</button>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="flex gap-2">
+                            <button onclick="captureCurrentPage()" class="glow-btn flex-1 py-3 rounded-2xl font-semibold text-xs flex items-center justify-center gap-1.5">
+                                <span>📸</span> Capture Page
+                            </button>
+                            <button onclick="finishAndBuildScannedPdf()" class="glass-panel border border-emerald-500/40 text-emerald-300 flex-1 py-3 rounded-2xl font-semibold text-xs">
+                                💾 Save Scanned PDF
+                            </button>
+                        </div>
+
+                        <div class="p-2.5 glass-panel rounded-2xl border border-white/10 flex items-center justify-between">
+                            <span class="text-[10px] text-slate-400">Ya photos upload karein:</span>
+                            <input type="file" id="galleryScanFiles" multiple accept="image/*" onchange="handleGalleryImages(event)" class="text-[10px] text-slate-400 file:py-1 file:px-2 file:rounded-lg file:bg-white/10 file:text-white file:border-0 cursor-pointer">
+                        </div>
+                    </div>
+                `;
+                startLiveCamera();
             } else if (tab === 'crop') {
                 container.innerHTML = `
                     <div class="space-y-3">
                         <div class="flex justify-between items-center">
-                            <h2 class="text-sm font-semibold">PDF Crop & Trim Studio</h2>
+                            <h2 class="text-sm font-semibold">PDF Crop Studio</h2>
                             <span class="text-[10px] text-rose-400 font-medium">Area Drag Selection</span>
                         </div>
                         <input type="file" id="cropFileInput" accept=".pdf" onchange="loadPdfForCrop(event)" class="text-[10px] text-slate-400 file:py-1.5 file:px-3 file:rounded-xl file:bg-rose-600 file:text-white file:border-0 cursor-pointer">
-                        <p class="text-[10px] text-slate-400">Mouse ya ungli se document par drag kar ke crop box banayein:</p>
-                        <div class="border border-white/15 rounded-2xl overflow-hidden bg-white flex justify-center items-center min-h-[320px] relative">
+                        <p class="text-[10px] text-slate-400">Document par ungli ya mouse se drag kar ke crop box banayein:</p>
+                        <div class="border border-white/15 rounded-2xl overflow-hidden bg-white flex justify-center items-center min-h-[300px] relative">
                             <canvas id="cropCanvas" class="cursor-crosshair max-w-full"></canvas>
                         </div>
                         <button onclick="saveCroppedArea()" class="glow-btn w-full py-3 rounded-2xl font-semibold text-xs">Crop & Save Area PDF</button>
@@ -148,7 +231,7 @@
                             <button onclick="setEditMode('highlight')" class="tool-btn px-2.5 py-1 rounded-xl bg-white/5 border border-white/10" id="btn-highlight">🖍️ Highlight</button>
                             <button onclick="setEditMode('text')" class="tool-btn px-2.5 py-1 rounded-xl bg-white/5 border border-white/10" id="btn-text">✍️ Add Text</button>
                             <button onclick="setEditMode('redact')" class="tool-btn px-2.5 py-1 rounded-xl bg-white/5 border border-white/10" id="btn-redact">⬛ Redact</button>
-                            <button onclick="setEditMode('sign')" class="tool-btn px-2.5 py-1 rounded-xl bg-white/5 border border-white/10" id="btn-sign">🖋️ Sign Stamp</button>
+                            <button onclick="setEditMode('sign')" class="tool-btn px-2.5 py-1 rounded-xl bg-white/5 border border-white/10" id="btn-sign">🖋️ Sign</button>
                             <button onclick="rotateCanvas()" class="tool-btn px-2.5 py-1 rounded-xl bg-white/5 border border-white/10">🔄 Rotate</button>
                             <input type="color" value="#facc15" onchange="currentDrawColor = this.value" class="w-6 h-6 rounded bg-transparent cursor-pointer ml-auto">
                         </div>
@@ -180,8 +263,8 @@
                 `;
             } else if (tab === 'convert') {
                 container.innerHTML = `
-                    <h2 class="text-sm font-semibold mb-1">Advanced 15+ Tools Suite</h2>
-                    <p class="text-[10px] text-slate-400 mb-2">1-Click Offline Multi-Converters</p>
+                    <h2 class="text-sm font-semibold mb-1">Advanced 15+ Offline Tools</h2>
+                    <p class="text-[10px] text-slate-400 mb-2">1-Click Offline Converter Suite</p>
                     <div class="grid grid-cols-4 gap-2 mb-3">
                         ${toolTile('textToPdf', '📝', 'Text Note', 'bg-blue-500/20 text-blue-400')}
                         ${toolTile('imageToPdf', '🖼️', 'Pic->PDF', 'bg-indigo-500/20 text-indigo-400')}
@@ -201,7 +284,7 @@
                         ${toolTile('reversePdf', '🔄', 'Reverse', 'bg-orange-500/20 text-orange-400')}
                     </div>
                     <div id="toolActionArea" class="glass-panel p-3.5 rounded-2xl border border-white/10 space-y-2.5">
-                        <p class="text-xs text-slate-400 text-center">Upar kisi bhi tool par tap karein.</p>
+                        <p class="text-xs text-slate-400 text-center">Upar kisi bhi tool par click karein.</p>
                     </div>
                 `;
             }
@@ -216,7 +299,103 @@
             `;
         }
 
-        // --- CROP ENGINE ---
+        // --- 1. LIVE CAMERA SCANNER ENGINE ---
+        async function startLiveCamera() {
+            const video = document.getElementById('scanVideo');
+            const startBtn = document.getElementById('cameraStartBtn');
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+                    audio: false
+                });
+                videoStream = stream;
+                if (video) {
+                    video.srcObject = stream;
+                    if (startBtn) startBtn.style.display = 'none';
+                }
+            } catch (err) {
+                console.warn("Camera fallback:", err);
+                if (startBtn) startBtn.innerText = "Camera Access Blocked (Tap to Retry)";
+            }
+        }
+
+        function setScanFilter(flt) {
+            scanFilter = flt;
+            document.querySelectorAll('.scan-flt-btn').forEach(b => {
+                b.className = "scan-flt-btn py-1.5 rounded-xl text-[10px] bg-white/5 border border-white/10 text-slate-300";
+            });
+            const activeBtn = document.getElementById('flt-' + flt);
+            if (activeBtn) activeBtn.className = "scan-flt-btn py-1.5 rounded-xl text-[10px] bg-blue-500/30 border border-blue-400 text-blue-300";
+        }
+
+        function captureCurrentPage() {
+            const video = document.getElementById('scanVideo');
+            if (!video || !video.videoWidth) {
+                alert('Camera stream active nahi hai!');
+                return;
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+
+            if (scanFilter === 'bw' || scanFilter === 'magic') {
+                const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const d = imgData.data;
+                const threshold = scanFilter === 'bw' ? 128 : 110;
+                for (let i = 0; i < d.length; i += 4) {
+                    let gray = (d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114);
+                    let finalVal = gray > threshold ? 255 : (scanFilter === 'magic' ? gray * 0.7 : 0);
+                    d[i] = finalVal;
+                    d[i+1] = finalVal;
+                    d[i+2] = finalVal;
+                }
+                ctx.putImageData(imgData, 0, 0);
+            }
+
+            const pageData = canvas.toDataURL('image/jpeg', 0.88);
+            capturedScanPages.push(pageData);
+            document.getElementById('scanCountBadge').innerText = `${capturedScanPages.length} Pages Scanned`;
+            triggerSparkles();
+        }
+
+        function handleGalleryImages(e) {
+            const files = e.target.files;
+            if (!files.length) return;
+            for (let f of files) {
+                const reader = new FileReader();
+                reader.onload = ev => {
+                    capturedScanPages.push(ev.target.result);
+                    document.getElementById('scanCountBadge').innerText = `${capturedScanPages.length} Pages Scanned`;
+                };
+                reader.readAsDataURL(f);
+            }
+            triggerSparkles();
+        }
+
+        function finishAndBuildScannedPdf() {
+            if (capturedScanPages.length === 0) {
+                alert('Pehle camera se page capture karein!');
+                return;
+            }
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            for (let i = 0; i < capturedScanPages.length; i++) {
+                if (i > 0) doc.addPage();
+                const w = doc.internal.pageSize.getWidth();
+                const h = doc.internal.pageSize.getHeight();
+                doc.addImage(capturedScanPages[i], 'JPEG', 5, 5, w - 10, h - 10);
+            }
+            doc.save('Live_Scanned_Document.pdf');
+            capturedScanPages = [];
+            document.getElementById('scanCountBadge').innerText = `0 Pages Scanned`;
+            triggerSparkles();
+        }
+
+        // --- 2. CROP ENGINE ---
         function initCropPlaceholder() {
             const cvs = document.getElementById('cropCanvas');
             if (!cvs) return;
@@ -252,7 +431,6 @@
             cvs.ontouchstart = start; cvs.ontouchmove = move; cvs.ontouchend = end;
         }
 
-        let originalCropImg = null;
         async function loadPdfForCrop(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -301,7 +479,7 @@
             triggerSparkles();
         }
 
-        // --- EDITOR ENGINE ---
+        // --- 3. EDITOR ENGINE ---
         let isDrawing = false;
         function setEditMode(m) {
             currentTool = m;
@@ -396,7 +574,7 @@
             triggerSparkles();
         }
 
-        // --- PAGE PICKER ---
+        // --- 4. PAGE PICKER ENGINE ---
         async function loadPdfPages(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -471,7 +649,7 @@
             triggerSparkles();
         }
 
-        // --- MERGE ---
+        // --- 5. MERGE & 15+ CONVERTER ENGINES ---
         async function executeMerge() {
             const files = document.getElementById('homeMergeFiles').files;
             if (files.length < 2) { alert('Kam az kam 2 PDF files select karein!'); return; }
@@ -503,7 +681,6 @@
             triggerSparkles();
         }
 
-        // --- TOOL MODAL ACTIONS ---
         function openToolModal(t) {
             const area = document.getElementById('toolActionArea');
             if (t === 'textToPdf') {
@@ -904,6 +1081,7 @@
             triggerSparkles();
         }
 
+        // Initialize App on Home Tab
         navigate('home');
     </script>
 </body>
